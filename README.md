@@ -1,6 +1,5 @@
 # nesasin1
 nesasin
-[NESASINWEBSITE.HTML](https://github.com/user-attachments/files/23935701/NESASINWEBSITE.HTML)
 <!DOCTYPE html>
 <html lang="id">
 <head>
