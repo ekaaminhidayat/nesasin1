@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>SMPN 1 SINDANG – Futuristic Website (Voice + Jarvis)</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* ============== GLOBAL ============== */
+html,body{margin:0;padding:0;width:100%;height:100%;font-family:'Orbitron',sans-serif;background:#000;color:#00ff99;overflow:hidden}
+
+/* ============== CANVAS MATRIX ============== */
+canvas{position:fixed;inset:0;z-index:0}
+
+/* ============== NAV / UI ============== */
+nav{position:fixed;top:15px;right:15px;display:flex;gap:12px;align-items:center;z-index:8}
+#voice-btn{background:transparent;border:2px solid #00ff99;color:#00ff99;padding:8px 12px;border-radius:999px;cursor:pointer;font-size:1.05em}
+#voice-btn.listening{background:#00ff99;color:#000;box-shadow:0 0 18px #00ff99;transform:scale(1.05)}
+#music-btn{cursor:pointer;padding:8px 12px;background:#00ff99;border-radius:999px;color:#000;box-shadow:0 0 12px #00ff99}
+
+/* ============== HERO ============== */
+.hero{position:relative;z-index:4;height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center}
+.hero h1{font-size:2.6em;margin:0;text-shadow:0 0 25px #00ff99}
+.hero p{font-size:1.2em;margin:12px 0 20px}
+.hero a{padding:12px 30px;background:#00ff99;color:#000;border-radius:40px;text-decoration:none;box-shadow:0 0 20px #00ff99;transition:.3s}
+.hero a:hover{transform:scale(1.06)}
+
+/* ============== ROBOT ============== */
+.robot{position:fixed;bottom:20px;width:130px;height:160px;z-index:5;animation:move 10s linear infinite alternate}
+@keyframes move{0%{left:-150px}100%{left:calc(100vw - 150px)}}
+.body{width:130px;height:90px;background:#00ff99;border-radius:12px;box-shadow:0 0 25px #00ff99;position:relative}
+.eye{width:22px;height:22px;background:#000;border-radius:50%;position:absolute;top:30px}
+.eye.left{left:28px}.eye.right{right:28px}
+.legs{width:90px;margin:5px auto 0;display:flex;justify-content:space-between}
+.leg{width:22px;height:60px;background:#00ff99;border-radius:7px;animation:walk .7s infinite alternate}
+.leg.right{animation-delay:.35s}
+@keyframes walk{from{transform:rotate(12deg)}to{transform:rotate(-12deg)}}
+.flag{width:45px;height:30px;background:red;position:absolute;top:-20px;left:42px;border:2px solid #fff;animation:flagwave .5s infinite alternate}
+@keyframes flagwave{from{transform:skewX(10deg)}to{transform:skewX(-10deg)}}
+
+/* laser */
+.laser{width:8px;height:40px;background:#00ff99;position:absolute;top:20px;left:calc(50% - 4px);box-shadow:0 0 20px #00ff99;display:none}
+
+/* ============== VOICE UI ============== */
+#voice-ui{position:fixed;bottom:20px;right:20px;z-index:9;background:rgba(0,0,0,0.45);padding:10px 14px;border-radius:12px;border:1px solid #00ff99;box-shadow:0 0 18px rgba(0,255,153,0.08);color:#00ff99;max-width:320px;font-size:.9em}
+#voice-status{font-weight:700;margin-bottom:6px}
+#voice-text{min-height:22px;word-break:break-word;opacity:.95;margin-bottom:6px}
+#voice-helps{font-size:.8em;opacity:.8}
+
+/* responsive */
+@media (max-width:520px){.hero h1{font-size:1.8em}nav{right:8px;gap:8px}}
+/* small visually-hidden helper */
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+</style>
+</head>
+<body>
+
+<!-- MATRIX -->
+<canvas id="matrix"></canvas>
+
+<!-- NAV minimal: Voice + Music -->
+<nav>
+  <button id="voice-btn" title="Klik untuk mulai/matikan dengar suara">🎤 Voice</button>
+  <div id="music-btn" title="Toggle music">🔊</div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <h1>WEBSITE SMPN 1 SINDANG</h1>
+  <p>BERAKSI • BERPRESTASI • BERKARAKTER</p>
+  <a href="NESASINWEBSITE.HTML">MASUK WEBSITE</a>
+</div>
+
+<!-- ROBOT -->
+<div class="robot" id="robot">
+  <div class="body">
+    <div class="eye left"></div><div class="eye right"></div>
+    <div class="flag"></div>
+  </div>
+  <div class="legs"><div class="leg left"></div><div class="leg right"></div></div>
+  <div class="laser" id="laser"></div>
+</div>
+
+<!-- VOICE UI -->
+<div id="voice-ui" aria-live="polite">
+  <div id="voice-status">Voice: <span id="vstate">Inactive</span></div>
+  <div id="voice-text">Tekan tombol mikrofon lalu ucapkan: <strong>"MASUK"</strong> atau <strong>"BUKA"</strong> atau <strong>"LANJUT"</strong></div>
+  <div id="voice-helps">Kata kunci yang dikenali: <em>masuk, buka, lanjut, ke dalam</em></div>
+</div>
+
+<!-- Hidden accessible hint for screen readers -->
+<div class="sr-only" id="sr-welcome">SELAMAT DATANG DI WEBSITE SMP NEGERI 1 SINDANG</div>
+
+<!-- AUDIO -->
+<audio id="bgmusic" loop>
+  <source src="DJ MASHUP X MELODY TANTE CULIK AKU DONG V7 BY KHARIS SOPAN FT NESS FX VIRAL FYP TIKTOK MENGKANEE!!.mp3" type="audio/mpeg">
+</audio>
+<audio id="shoot"><source src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_47d4b6d829.mp3?filename=laser-gun-81220.mp3" type="audio/mpeg"></audio>
+
+<script>
+/* ========== MATRIX ========== */
+const canvas = document.getElementById('matrix'), ctx = canvas.getContext('2d');
+let W,H,fontSize=14,cols,drops;
+const chars=['0','1'];
+function resize(){W=innerWidth;H=innerHeight;canvas.width=W;canvas.height=H;cols=Math.floor(W/fontSize);drops=new Array(cols).fill(0)}
+function draw(){ctx.fillStyle='rgba(0,0,0,0.08)';ctx.fillRect(0,0,W,H);ctx.fillStyle='#00ff99';ctx.font=fontSize+'px monospace';for(let i=0;i<cols;i++){const t=chars[Math.random()>0.5?1:0];ctx.fillText(t,i*fontSize,drops[i]*fontSize);if(drops[i]*fontSize>H && Math.random()>0.975) drops[i]=0;drops[i]++}requestAnimationFrame(draw)}
+resize();draw();addEventListener('resize',resize);
+
+/* ========== MUSIC CONTROL ========== */
+const music = document.getElementById('bgmusic'), musicBtn = document.getElementById('music-btn');
+// autoplay often blocked; start on first user interaction
+musicBtn.addEventListener('click', ()=>{
+  if (music.paused) {
+    music.play().catch(()=>{}); musicBtn.textContent='🔊';
+  } else {
+    music.pause(); musicBtn.textContent='🔈';
+  }
+});
+document.body.addEventListener('click', ()=>{ music.play().catch(()=>{}); musicBtn.textContent='🔊' }, { once:true });
+
+/* ========== ROBOT LASER & SHOOT ========== */
+const laser = document.getElementById('laser'), shoot = document.getElementById('shoot');
+setInterval(()=>{ laser.style.display='block'; try{ shoot.currentTime=0; shoot.play().catch(()=>{}); }catch(e){} setTimeout(()=>laser.style.display='none',150) }, 2500);
+
+/* ========== VOICE RECOGNITION (SpeechRecognition) ========== */
+const voiceBtn = document.getElementById('voice-btn'), vstate = document.getElementById('vstate'), vtext = document.getElementById('voice-text');
+let recognizing=false, recognition=null;
+const redirectUrl = 'NESASINWEBSITE.HTML';
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+
+if (SpeechRecognition) {
+  recognition = new SpeechRecognition();
+  recognition.lang = 'id-ID';
+  recognition.interimResults = true;
+  recognition.continuous = false;
+
+  recognition.onstart = ()=>{ recognizing=true; voiceBtn.classList.add('listening'); vstate.textContent='Listening...'; }
+  recognition.onend = ()=>{ recognizing=false; voiceBtn.classList.remove('listening'); vstate.textContent='Inactive'; }
+  recognition.onerror = (e)=>{ recognizing=false; voiceBtn.classList.remove('listening'); vstate.textContent='Error'; if(e.error==='not-allowed' || e.error==='service-not-allowed') vtext.textContent='Izin mikrofon ditolak. Izinkan akses mikrofon di pengaturan browser.' }
+
+  let finalTranscript='';
+  recognition.onresult = (event)=>{
+    let interim='';
+    for (let i=event.resultIndex;i<event.results.length;i++){
+      if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript;
+      else interim += event.results[i][0].transcript;
+    }
+    const shown = (finalTranscript + ' ' + interim).trim();
+    vtext.textContent = shown || 'Mendengarkan...';
+    if (finalTranscript) {
+      handleVoiceCommand(finalTranscript.toLowerCase());
+      finalTranscript = '';
+    }
+  };
+} else {
+  vtext.textContent = 'SpeechRecognition tidak tersedia di browser ini. Gunakan Chrome/Edge.';
+}
+
+/* start/stop voice button */
+voiceBtn.addEventListener('click', ()=>{
+  if (!SpeechRecognition) { alert('Browser Anda tidak mendukung pengenalan suara. Gunakan Chrome/Edge.'); return; }
+  if (!recognizing) {
+    try { recognition.start(); } catch(e){ console.warn(e); }
+  } else recognition.stop();
+});
+window.addEventListener('keydown', e => { if (e.key.toLowerCase()==='v') voiceBtn.click(); });
+
+/* ========== VOICE SYNTHESIS (JARVIS-LIKE) ========== */
+function speakJarvis(text, opts = {rate:1.05, pitch:0.6, volume:1}) {
+  if (!('speechSynthesis' in window)) return;
+  const msg = new SpeechSynthesisUtterance(text);
+  msg.lang = 'id-ID';
+  msg.rate = opts.rate;
+  msg.pitch = opts.pitch;
+  msg.volume = opts.volume;
+
+  function selectVoice(){
+    const voices = window.speechSynthesis.getVoices();
+    if (!voices || voices.length === 0) return null;
+    // prefer voices that may sound deep/neutral; this is best-effort and varies by browser
+    const preferNames = ['Google UK English Male','Microsoft David','Daniel','en-GB','en-US','id-ID','Indonesian'];
+    for (const name of preferNames) {
+      const v = voices.find(vo => vo.name.includes(name) || (vo.lang && vo.lang.toLowerCase().includes(name.toLowerCase())));
+      if (v) return v;
+    }
+    // fallback to first available
+    return voices[0];
+  }
+
+  const v = selectVoice();
+  if (v) { msg.voice = v; window.speechSynthesis.speak(msg); }
+  else {
+    // voices may load asynchronously
+    window.speechSynthesis.onvoiceschanged = () => {
+      const v2 = selectVoice();
+      if (v2) msg.voice = v2;
+      window.speechSynthesis.speak(msg);
+    };
+  }
+}
+
+/* ========== HANDLE COMMAND & REDIRECT (Option B behavior) ========== */
+function handleVoiceCommand(text) {
+  const keywords = ['masuk','buka','lanjut','ke dalam','masuk website','masuk situs','lanjutkan'];
+  for (const kw of keywords) {
+    if (text.includes(kw)) {
+      vtext.textContent = `Perintah suara terdeteksi: "${kw}" — Mengalihkan...`;
+      triggerRobotAction();
+      // speak Jarvis and redirect quickly (Option B: speak and fast redirect)
+      speakJarvis('Perintah diterima. Mengalihkan halaman sekarang.');
+      setTimeout(()=> { try { window.location.href = redirectUrl; } catch(e) {} }, 500);
+      return;
+    }
+  }
+  vtext.textContent = `Terdengar: "${text}". Ucapkan "masuk" / "buka" / "lanjut" untuk pindah.`;
+}
+
+/* small robot action */
+function triggerRobotAction(){
+  laser.style.display='block';
+  setTimeout(()=> laser.style.display='none',220);
+  try { shoot.currentTime = 0; shoot.play().catch(()=>{}); } catch(e){}
+}
+
+/* warm up voices for quicker playback */
+if ('speechSynthesis' in window) {
+  window.speechSynthesis.getVoices();
+  window.speechSynthesis.onvoiceschanged = ()=>window.speechSynthesis.getVoices();
+}
+
+/* ========== WELCOME SPEECH (no heavy boot animation) ========== */
+/* Per pilihan B pengguna: langsung suara welcome, tampil halaman normal */
+document.addEventListener('DOMContentLoaded', ()=> {
+  // announce welcome in Jarvis style
+  try {
+    speakJarvis('Selamat datang di website SMP Negeri 1 Sindang');
+  } catch(e){}
+  // also update screen reader text
+  const sr = document.getElementById('sr-welcome');
+  if (sr) {
+    sr.textContent = 'SELAMAT DATANG DI WEBSITE SMP NEGERI 1 SINDANG';
+  }
+});
+</script>
+</body>
+</html>
